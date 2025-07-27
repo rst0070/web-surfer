@@ -1,4 +1,4 @@
-package service
+package adapter
 
 import (
 	"bufio"
@@ -8,9 +8,14 @@ import (
 	"strings"
 )
 
-const httpReg string = `https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&//=]*)`
+const (
+	httpReg = `https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&//=]*)`
+)
 
-func CrawlWebLinks(url string) ([]string, error) {
+type SimpleWebCrawler struct {
+}
+
+func (crawler SimpleWebCrawler) ExtractLinks(url string) ([]string, error) {
 	r, _ := regexp.Compile(httpReg)
 
 	resp, err := http.Get(url)
@@ -19,8 +24,6 @@ func CrawlWebLinks(url string) ([]string, error) {
 	}
 	defer resp.Body.Close()
 
-	//fmt.Println("Response status:", resp.Status)
-
 	var sb strings.Builder
 	scanner := bufio.NewScanner(resp.Body)
 	for scanner.Scan() {
@@ -28,13 +31,13 @@ func CrawlWebLinks(url string) ([]string, error) {
 	}
 
 	content := sb.String()
-	fmt.Println(len(content))
 
 	urls := r.FindAllString(content, 50)
-	//fmt.Println(urls)
 	if err := scanner.Err(); err != nil {
 		return []string{}, err
 	}
+
+	fmt.Println(len(urls))
 
 	return urls, nil
 }
