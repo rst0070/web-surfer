@@ -11,7 +11,7 @@ func SurfWebLinks(url string, maxDepth int, maxConcurrency int) []types.WebLink 
 		StartUrl:       url,
 		MaxDepth:       maxDepth,
 		MaxConcurrency: maxConcurrency,
-		Crawler:        adapter.SimpleWebCrawler{},
+		Crawler:        &adapter.SimpleWebCrawler{},
 	}
 
 	links := surfer.SurfWeb()

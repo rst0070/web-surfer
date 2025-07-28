@@ -120,6 +120,12 @@ func (surfer *BFSSurfer) work() {
 				Depth: node.Depth + 1,
 			}
 
+			// this takes too long time
+			// metadata, err := surfer.Crawler.ExtractMetadata(url)
+			// if err == nil {
+			// 	neighbour.Metadata = metadata
+			// }
+
 			if node.Depth < surfer.MaxDepth-1 {
 				surfer.nextNodeQ <- neighbour
 				// if enqueue to nodeQ, it can cause situation:
