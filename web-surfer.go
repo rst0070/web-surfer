@@ -14,11 +14,15 @@ func SurfWebLinks(url string, maxDepth int, maxConcurrency int) []types.WebLink 
 		Crawler:        &adapter.SimpleWebCrawler{},
 	}
 
-	links := surfer.SurfWeb()
-
-	return links
+	return surfer.SurfWeb()
 }
 
-func SurfWebLinksStream(url string, maxDepth int, maxConcurrency int, resultChannel chan types.WebLink) {
-	// unimplemented
+func SurfWebLinksStream(url string, maxDepth int, maxConcurrency int) <-chan types.WebLink {
+	surfer := usecase.BFSSurfer{
+		StartUrl:       url,
+		MaxDepth:       maxDepth,
+		MaxConcurrency: maxConcurrency,
+		Crawler:        &adapter.SimpleWebCrawler{},
+	}
+	return surfer.SurfWebStream()
 }
