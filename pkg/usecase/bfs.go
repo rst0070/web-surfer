@@ -22,12 +22,23 @@ type BFSSurfer struct {
 
 	numWorker      int
 	numWorkerMutex sync.Mutex
-
-	waitGroup sync.WaitGroup
 }
 
 func (surfer *BFSSurfer) SurfWeb() []types.WebLink {
 
+	stream := surfer.SurfWebStream()
+	// Result
+	var resultList []types.WebLink
+	func() {
+		for link := range stream {
+			resultList = append(resultList, link)
+		}
+	}()
+
+	return resultList
+}
+
+func (surfer *BFSSurfer) SurfWebStream() <-chan types.WebLink {
 	// init
 	surfer.nodeQ = make(chan types.WebNode)
 	surfer.nextNodeQ = make(chan types.WebNode)
@@ -37,8 +48,6 @@ func (surfer *BFSSurfer) SurfWeb() []types.WebLink {
 	surfer.visitUrlMap[surfer.StartUrl] = true
 
 	surfer.numWorker = 0
-
-	surfer.waitGroup.Add(1)
 
 	// run concurrently
 	for i := 0; i < surfer.MaxConcurrency; i++ {
@@ -78,15 +87,7 @@ func (surfer *BFSSurfer) SurfWeb() []types.WebLink {
 
 	}()
 
-	// Result
-	var resultList []types.WebLink
-	func() {
-		for link := range surfer.resultQ {
-			resultList = append(resultList, link)
-		}
-	}()
-
-	return resultList
+	return surfer.resultQ
 }
 
 func (surfer *BFSSurfer) work() {
@@ -106,14 +107,6 @@ func (surfer *BFSSurfer) work() {
 		}
 
 		for _, url := range neighbours {
-			surfer.visitMutex.Lock()
-			if surfer.visitUrlMap[url] {
-				surfer.visitMutex.Unlock()
-				continue
-			} else {
-				surfer.visitUrlMap[url] = true
-				surfer.visitMutex.Unlock()
-			}
 
 			neighbour := types.WebNode{
 				Url:   url,
@@ -126,10 +119,18 @@ func (surfer *BFSSurfer) work() {
 			// 	neighbour.Metadata = metadata
 			// }
 
-			if node.Depth < surfer.MaxDepth-1 {
-				surfer.nextNodeQ <- neighbour
-				// if enqueue to nodeQ, it can cause situation:
-				// all worker tries to enqueue at the same time with waiting forever
+			surfer.visitMutex.Lock()
+			if surfer.visitUrlMap[url] {
+				surfer.visitMutex.Unlock()
+			} else {
+				surfer.visitUrlMap[url] = true
+				surfer.visitMutex.Unlock()
+
+				if neighbour.Depth < surfer.MaxDepth {
+					surfer.nextNodeQ <- neighbour
+					// if enqueue to nodeQ, it can cause situation:
+					// all worker tries to enqueue at the same time with waiting forever
+				}
 			}
 
 			surfer.resultQ <- types.WebLink{
