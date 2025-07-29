@@ -1,43 +1,40 @@
 package adapter
 
 import (
-	"fmt"
-	"io"
 	"net/http"
-	"regexp"
 
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
-)
-
-const (
-	httpReg = `https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&//=]*)`
 )
 
 type SimpleWebCrawler struct {
 }
 
 func (crawler *SimpleWebCrawler) ExtractLinks(url string) ([]string, error) {
-	r, _ := regexp.Compile(httpReg)
+	links := []string{}
 
 	resp, err := http.Get(url)
 	if err != nil {
-		return []string{}, err
+		return links, err
 	}
 	defer resp.Body.Close()
 
-	contentBytes, err := io.ReadAll(resp.Body)
+	doc, err := html.Parse(resp.Body)
 	if err != nil {
-		return []string{}, err
+		return links, err
 	}
 
-	contentStr := string(contentBytes)
+	for n := range doc.Descendants() {
+		if n.Type == html.ElementNode && n.DataAtom == atom.A {
+			for _, attr := range n.Attr {
+				if attr.Key == "href" {
+					links = append(links, attr.Val)
+				}
+			}
+		}
+	}
 
-	urls := r.FindAllString(contentStr, -1)
-
-	fmt.Println(len(urls))
-
-	return urls, nil
+	return links, nil
 }
 
 func (crawler *SimpleWebCrawler) ExtractMetadata(url string) (map[string]string, error) {
