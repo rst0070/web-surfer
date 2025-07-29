@@ -107,14 +107,6 @@ func (surfer *BFSSurfer) work() {
 		}
 
 		for _, url := range neighbours {
-			surfer.visitMutex.Lock()
-			if surfer.visitUrlMap[url] {
-				surfer.visitMutex.Unlock()
-				continue
-			} else {
-				surfer.visitUrlMap[url] = true
-				surfer.visitMutex.Unlock()
-			}
 
 			neighbour := types.WebNode{
 				Url:   url,
@@ -127,10 +119,18 @@ func (surfer *BFSSurfer) work() {
 			// 	neighbour.Metadata = metadata
 			// }
 
-			if node.Depth < surfer.MaxDepth-1 {
-				surfer.nextNodeQ <- neighbour
-				// if enqueue to nodeQ, it can cause situation:
-				// all worker tries to enqueue at the same time with waiting forever
+			surfer.visitMutex.Lock()
+			if surfer.visitUrlMap[url] {
+				surfer.visitMutex.Unlock()
+			} else {
+				surfer.visitUrlMap[url] = true
+				surfer.visitMutex.Unlock()
+
+				if neighbour.Depth < surfer.MaxDepth {
+					surfer.nextNodeQ <- neighbour
+					// if enqueue to nodeQ, it can cause situation:
+					// all worker tries to enqueue at the same time with waiting forever
+				}
 			}
 
 			surfer.resultQ <- types.WebLink{
