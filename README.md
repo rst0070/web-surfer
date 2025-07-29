@@ -12,14 +12,12 @@ import (
 )
 
 func main() {
-	links := web_surfer.SurfWebLinks(
-		"https://go.dev/",
-		3,
-		100,
-	)
+	stream := web_surfer.SurfWebLinksStream("https://go.dev/", 3, 100)
+	// start url, maximum depth, max concurrency
 
-	for _, link := range links {
+	for link := range stream {
 		fmt.Println(*(link.Source), *(link.Target))
 	}
 }
+
 ```
